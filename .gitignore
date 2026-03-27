@@ -1,0 +1,3 @@
+.streamlit/secrets.toml
+autogestor.db
+__pycache__/

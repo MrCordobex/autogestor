@@ -1,0 +1,40 @@
+name: Resumen matutino Telegram
+
+on:
+  # Se ejecuta todos los días a las 7:00 hora de Madrid
+  # GitHub Actions usa UTC → Madrid es UTC+2 en verano, UTC+1 en invierno
+  # Ponemos 6:00 UTC para que llegue ~8:00 en verano (ajusta si prefieres otra hora)
+  schedule:
+    - cron: "0 6 * * *"
+
+  # Permite lanzarlo manualmente desde GitHub para probar
+  workflow_dispatch:
+
+jobs:
+  notificar:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descargar el código del repo
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      # 2. Instalar Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Instalar dependencias (solo las que necesita notify.py)
+      - name: Instalar dependencias
+        run: pip install libsql-experimental
+
+      # 4. Ejecutar el script de notificación
+      # Los secrets se inyectan como variables de entorno automáticamente
+      - name: Enviar resumen por Telegram
+        env:
+          TURSO_URL:         ${{ secrets.TURSO_URL }}
+          TURSO_TOKEN:       ${{ secrets.TURSO_TOKEN }}
+          TELEGRAM_TOKEN:    ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID:  ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python notify.py
