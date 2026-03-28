@@ -27,7 +27,7 @@ jobs:
 
       # 3. Instalar dependencias (solo las que necesita notify.py)
       - name: Instalar dependencias
-        run: pip install libsql-experimental
+        run: pip install requests
 
       # 4. Ejecutar el script de notificación
       # Los secrets se inyectan como variables de entorno automáticamente
