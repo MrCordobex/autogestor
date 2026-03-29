@@ -24,13 +24,13 @@ st.set_page_config(page_title="AutoGestor", layout="wide",
 
 TIMEZONE = pytz.timezone("Europe/Madrid")
 
-TIPOS_TAREA = ["Examen", "Entrega", "Estudio", "Clase", "Otro"]
+TIPOS_TAREA = ["Examen", "Entrega", "Estudio", "Lectura", "Otro"]
 
 COLORES_TIPO = {
     "Examen":   "#FF4B4B",
     "Entrega":  "#FFA500",
     "Estudio":  "#1E90FF",
-    "Clase":  "#9370DB",
+    "Lectura":  "#9370DB",
     "Otro":     "#808080",
     "Clase":    "#2E8B57",
     "Futbol":   "#FFFFFF",
@@ -212,7 +212,7 @@ def dialogo_detalle(item: dict):
 def vista_diaria(tareas, horario, loyola, futbol, fecha: date):
     hoy = hoy_madrid()
 
-    # Banner tareas atrasadas
+    # ── Banner tareas atrasadas ──
     atrasadas = [
         t for t in tareas
         if t["estado"] != "Completada"
@@ -227,7 +227,7 @@ def vista_diaria(tareas, horario, loyola, futbol, fecha: date):
 
     col_h, col_t = st.columns([1, 2])
 
-    # ── Horario ──
+    # ── Horario del día ──
     with col_h:
         st.subheader("🏫 Horario del día")
         eventos_dia = [i for i in items_del_dia(fecha, [], horario, loyola, futbol)
@@ -238,25 +238,25 @@ def vista_diaria(tareas, horario, loyola, futbol, fecha: date):
         else:
             st.info("Sin clases ni eventos hoy.")
 
-    # ── Tareas ──
+    # ── Columna derecha ──
     with col_t:
+
+        # — Tareas del día seleccionado —
         st.subheader(f"📝 {fecha.strftime('%A %d %b')}")
-        items_t = [i for i in items_del_dia(fecha, tareas, [], [], [])
-                   if i["tipo"] in ("Tarea", "Deadline")]
+        tareas_dia = [
+            i for i in items_del_dia(fecha, tareas, [], [], [])
+            if i["tipo"] in ("Tarea", "Deadline")
+        ]
 
-        if not items_t:
-            st.info("✅ Sin tareas para este día.")
-
-        tareas_dia       = [i for i in items_t if i["tipo"] == "Tarea"]
-        deadlines_hoy    = [i for i in items_t if i["tipo"] == "Deadline"]
-
-        def _tarjeta(i):
+        def _tarjeta_dia(i):
             raw   = i["raw"]
             color = COLORES_TIPO.get(raw.get("tipo", "Otro"), "#888")
-            hora_badge = (f"<span style='background:#333;color:#fff;"
-                          f"padding:2px 6px;border-radius:4px;font-size:.8em'>"
-                          f"🕒 {raw['hora']}</span> "
-                          if raw.get("hora") else "")
+            hora_badge = (
+                f"<span style='background:#333;color:#fff;"
+                f"padding:2px 6px;border-radius:4px;font-size:.8em'>"
+                f"🕒 {raw['hora']}</span> "
+                if raw.get("hora") else ""
+            )
             with st.container(border=True):
                 c1, c2 = st.columns([5, 1])
                 c1.markdown(
@@ -274,14 +274,80 @@ def vista_diaria(tareas, horario, loyola, futbol, fecha: date):
                     c2.write("✅")
 
         if tareas_dia:
-            st.markdown("### 📅 Tareas del día")
             for i in tareas_dia:
-                _tarjeta(i)
+                _tarjeta_dia(i)
+        else:
+            st.info("✅ Sin tareas para este día.")
 
-        if deadlines_hoy and fecha == hoy:
-            st.markdown("### ⏰ Deadlines")
-            for i in deadlines_hoy:
-                _tarjeta(i)
+        st.divider()
+
+        # — Todas las pendientes con días restantes —
+        st.subheader("📋 Todas las pendientes")
+
+        PRIO_ORDEN = {"Urgente": 0, "Importante": 1, "Normal": 2}
+        PRIO_COLOR = {"Urgente": "#FF4B4B", "Importante": "#FFA500", "Normal": "#2E8B57"}
+
+        pendientes = sorted(
+            [t for t in tareas if t["estado"] != "Completada"],
+            key=lambda t: (
+                t.get("fecha_fin") or t.get("fecha", "9999-99-99"),
+                PRIO_ORDEN.get(t.get("prioridad", "Normal"), 2)
+            )
+        )
+
+        if not pendientes:
+            st.success("🎉 ¡No tienes ninguna tarea pendiente!")
+        else:
+            for t in pendientes:
+                ref_str = t.get("fecha_fin") or t.get("fecha")
+                prio    = t.get("prioridad", "Normal")
+                color_p = PRIO_COLOR.get(prio, "#888")
+                color_t = COLORES_TIPO.get(t.get("tipo", "Otro"), "#888")
+                es_dl   = bool(t.get("fecha_fin"))
+
+                # Calcular días restantes y color del badge
+                if ref_str:
+                    try:
+                        dias = (date.fromisoformat(ref_str) - hoy).days
+                        if dias < 0:
+                            dias_txt, dias_color = "ATRASADA", "#FF4B4B"
+                        elif dias == 0:
+                            dias_txt, dias_color = "HOY", "#FF4B4B"
+                        elif dias == 1:
+                            dias_txt, dias_color = "mañana", "#FFA500"
+                        elif dias <= 3:
+                            dias_txt, dias_color = f"{dias}d", "#FFA500"
+                        elif dias <= 7:
+                            dias_txt, dias_color = f"{dias}d", "#1E90FF"
+                        else:
+                            dias_txt, dias_color = f"{dias}d", "#555"
+                    except Exception:
+                        dias_txt, dias_color = ref_str, "#555"
+                else:
+                    dias_txt, dias_color = "sin fecha", "#555"
+
+                icono = "⏰" if es_dl else "📅"
+
+                with st.container(border=True):
+                    c1, c2 = st.columns([5, 1])
+                    c1.markdown(
+                        f"<div style='display:flex;align-items:center;gap:6px;flex-wrap:wrap'>"
+                        f"<span style='background:{dias_color};color:white;padding:2px 8px;"
+                        f"border-radius:12px;font-size:.8em;font-weight:bold'>"
+                        f"{icono} {dias_txt}</span>"
+                        f"<strong>{t['titulo']}</strong>"
+                        f"<span style='background:{color_t};color:white;padding:2px 6px;"
+                        f"border-radius:4px;font-size:.75em'>{t.get('tipo','')}</span>"
+                        f"<span style='background:{color_p};color:white;padding:2px 6px;"
+                        f"border-radius:4px;font-size:.75em'>{prio}</span>"
+                        f"</div>"
+                        f"<div style='font-size:.8em;color:#888;margin-top:2px'>"
+                        f"{'Deadline' if es_dl else 'Fecha'}: {ref_str or '—'}</div>",
+                        unsafe_allow_html=True
+                    )
+                    if c2.button("✅", key=f"ok_pen_{t['id']}"):
+                        db.tareas_actualizar(t["id"], estado="Completada")
+                        st.rerun()
 
 
 def _semana_css():
