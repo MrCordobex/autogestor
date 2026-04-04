@@ -31,8 +31,16 @@ def crear_driver() -> Optional[webdriver.Chrome]:
         opts.add_argument(arg)
 
     # Intentar driver del sistema (Linux/Cloud)
-    candidatos_driver = ["/usr/bin/chromedriver", "/usr/lib/chromium-browser/chromedriver"]
-    candidatos_bin    = ["/usr/bin/chromium", "/usr/bin/chromium-browser"]
+    candidatos_driver = [
+        "/usr/bin/chromedriver",
+        "/usr/lib/chromium-browser/chromedriver",
+        "/snap/bin/chromium.chromedriver",
+    ]
+    candidatos_bin = [
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
+    ]
 
     service = None
     for p in candidatos_driver:
