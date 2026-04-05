@@ -131,16 +131,16 @@ def scrape_loyola(semanas: int = 12) -> list[dict]:
                         asig = parts[0].strip()
                         aula = parts[1].replace("Aula:", "").strip() if len(parts) > 1 else "?"
 
-                        # Ajuste zona horaria (+1h)
-                        try:
-                            tramos = hora_txt.split("-")
-                            ajustados = []
-                            for t in tramos:
-                                dt = datetime.strptime(t.strip(), "%H:%M") + timedelta(hours=1)
-                                ajustados.append(dt.strftime("%H:%M"))
-                            hora_txt = f"{ajustados[0]} - {ajustados[1]}"
-                        except Exception:
-                            pass
+                        # # Ajuste zona horaria (+1h)
+                        # try:
+                        #     tramos = hora_txt.split("-")
+                        #     ajustados = []
+                        #     for t in tramos:
+                        #         dt = datetime.strptime(t.strip(), "%H:%M") + timedelta(hours=1)
+                        #         ajustados.append(dt.strftime("%H:%M"))
+                        #     hora_txt = f"{ajustados[0]} - {ajustados[1]}"
+                        # except Exception:
+                        #     pass
 
                         clases.append({"asignatura": asig, "aula": aula,
                                        "fecha": fecha, "hora": hora_txt})
