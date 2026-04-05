@@ -1,0 +1,30 @@
+name: Aviso Deadlines 24h
+
+on:
+  schedule:
+    # Cada noche a las 21:00 hora Madrid (19:00 UTC en verano)
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Enviar aviso si hay deadlines mañana
+        env:
+          TURSO_URL:        ${{ secrets.TURSO_URL }}
+          TURSO_TOKEN:      ${{ secrets.TURSO_TOKEN }}
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python notify.py deadlines
