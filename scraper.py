@@ -131,19 +131,26 @@ def scrape_loyola(semanas: int = 12) -> list[dict]:
                         asig = parts[0].strip()
                         aula = parts[1].replace("Aula:", "").strip() if len(parts) > 1 else "?"
 
-                        # # Ajuste zona horaria (+1h)
-                        # try:
-                        #     tramos = hora_txt.split("-")
-                        #     ajustados = []
-                        #     for t in tramos:
-                        #         dt = datetime.strptime(t.strip(), "%H:%M") + timedelta(hours=1)
-                        #         ajustados.append(dt.strftime("%H:%M"))
-                        #     hora_txt = f"{ajustados[0]} - {ajustados[1]}"
-                        # except Exception:
-                        #     pass
+                        # Ajuste UTC → Europe/Madrid
+                        # La web devuelve horas en UTC. España es UTC+2 en verano, UTC+1 en invierno.
+                        try:
+                            import pytz
+                            from datetime import datetime as dt_
+                            zona = pytz.timezone("Europe/Madrid")
+                            tramos = hora_txt.split("-")
+                            ajustados = []
+                            for t in tramos:
+                                utc_dt = datetime.strptime(t.strip(), "%H:%M").replace(
+                                    tzinfo=pytz.utc, year=2000, month=6, day=1
+                                )
+                                local_dt = utc_dt.astimezone(zona)
+                                ajustados.append(local_dt.strftime("%H:%M"))
+                            hora_txt = f"{ajustados[0]} - {ajustados[1]}"
+                        except Exception:
+                            pass
 
                         clases.append({"asignatura": asig, "aula": aula,
-                                       "fecha": fecha, "hora": hora_txt})
+                                    "fecha": fecha, "hora": hora_txt})
                     except Exception:
                         continue
 
