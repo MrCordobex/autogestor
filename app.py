@@ -8,6 +8,7 @@ Arquitectura:
 """
 
 import calendar
+import hashlib
 import json
 from datetime import date, datetime, timedelta, time
 
@@ -159,6 +160,31 @@ def items_del_dia(dia: date, tareas: list, horario: list,
 
     items.sort(key=lambda x: x["hora_sort"].replace(":", "") if x["hora_sort"] else "9999")
     return items
+
+
+def clave_item_calendario(prefijo: str, dia: date, item: dict, idx: int) -> str:
+    """Genera una key estable y realmente única para botones del calendario."""
+    raw = item.get("raw", {})
+    raw_id = raw.get("id")
+    if raw_id is not None:
+        return f"{prefijo}_{dia.isoformat()}_{item.get('tipo', 'item')}_{raw_id}"
+
+    fingerprint = json.dumps(
+        {
+            "tipo": item.get("tipo"),
+            "titulo": item.get("titulo"),
+            "hora_sort": item.get("hora_sort"),
+            "hora": item.get("hora"),
+            "subtitulo": item.get("subtitulo"),
+            "raw": raw,
+            "idx": idx,
+        },
+        sort_keys=True,
+        ensure_ascii=True,
+        default=str,
+    )
+    digest = hashlib.md5(fingerprint.encode("utf-8")).hexdigest()[:10]
+    return f"{prefijo}_{dia.isoformat()}_{digest}"
 
 
 # ─────────────────────────── DIALOG ────────────────────────────────────────
@@ -401,10 +427,10 @@ def vista_semanal(tareas, horario, loyola, futbol, fecha: date):
               <div style='font-size:1.2em;padding:5px'>{dia.day}</div>
             </div>""", unsafe_allow_html=True)
 
-            for item in items_del_dia(dia, tareas, horario, loyola, futbol):
+            for item_idx, item in enumerate(items_del_dia(dia, tareas, horario, loyola, futbol)):
                 trunc = (item["titulo"][:10] + "..") if len(item["titulo"]) > 10 else item["titulo"]
                 label = f"{item['icon']} {item['hora_sort']} {trunc}"
-                key   = f"sw_{i}_{dia}_{item['hora_sort']}_{item['titulo'][:6]}"
+                key   = clave_item_calendario("sw", dia, item, item_idx)
                 if st.button(label, key=key, use_container_width=True):
                     dialogo_detalle(item)
 
@@ -438,10 +464,10 @@ def vista_mensual(tareas, horario, loyola, futbol, fecha: date):
                     unsafe_allow_html=True
                 )
 
-                for item in items_del_dia(dia, tareas, horario, loyola, futbol):
+                for item_idx, item in enumerate(items_del_dia(dia, tareas, horario, loyola, futbol)):
                     trunc = (item["titulo"][:8] + "..") if len(item["titulo"]) > 8 else item["titulo"]
                     label = f"{item['icon']} {trunc}"
-                    key   = f"sm_{day_num}_{i}_{item['hora_sort']}_{item['titulo'][:6]}"
+                    key   = clave_item_calendario("sm", dia, item, item_idx)
                     if st.button(label, key=key, use_container_width=True,
                                  help=f"{item['hora_sort']} — {item['titulo']}"):
                         dialogo_detalle(item)
