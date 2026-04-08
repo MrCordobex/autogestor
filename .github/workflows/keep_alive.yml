@@ -2,7 +2,6 @@ name: Keep Alive Streamlit
 
 on:
   schedule:
-    # Cada 12 horas
     - cron: "0 */12 * * *"
   workflow_dispatch:
 
@@ -23,13 +22,16 @@ jobs:
       - name: Instalar Selenium
         run: pip install selenium
 
-      - name: Abrir la app para activarla
+      - name: Activar la app
         run: |
           python - <<'PYEOF'
           import time
           from selenium import webdriver
           from selenium.webdriver.chrome.service import Service
           from selenium.webdriver.chrome.options import Options
+          from selenium.webdriver.common.by import By
+          from selenium.webdriver.support.ui import WebDriverWait
+          from selenium.webdriver.support import expected_conditions as EC
 
           opts = Options()
           opts.add_argument("--headless")
@@ -44,8 +46,21 @@ jobs:
           url = "${{ secrets.STREAMLIT_URL }}"
           print(f"Abriendo {url}...")
           driver.get(url)
-          time.sleep(20)
-          print(f"Titulo: {driver.title}")
-          print("App activada correctamente")
+
+          # Esperar hasta 30s a que aparezca el botón de wake up
+          try:
+              boton = WebDriverWait(driver, 30).until(
+                  EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'get this app back up')]"))
+              )
+              print("App dormida — haciendo clic en wake up...")
+              boton.click()
+              # Esperar a que arranque del todo
+              time.sleep(30)
+              print("App activada tras wake up")
+          except Exception:
+              # Si no aparece el botón, la app ya estaba activa
+              print("App ya estaba activa, no había botón de wake up")
+
+          print(f"Título final: {driver.title}")
           driver.quit()
           PYEOF
