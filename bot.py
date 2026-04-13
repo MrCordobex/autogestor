@@ -132,16 +132,23 @@ def construir_contexto() -> str:
     try:
         clases, ts_l = db.cache_leer("loyola")
         if clases:
-            lineas.append(f"=== CLASES UNIVERSIDAD (scraped, {len(clases)} entradas) ===")
-            # Mostrar próximas 2 semanas
-            limite = (hoy + timedelta(days=14)).isoformat()
-            proximas = [c for c in clases if hoy_str <= c.get("fecha","") <= limite]
-            for c in proximas:
+            # Todas las clases futuras (para que Gemini pueda contar por asignatura)
+            futuras = sorted(
+                [c for c in clases if c.get("fecha","") >= hoy_str],
+                key=lambda x: x.get("fecha","")
+            )
+            lineas.append(f"=== CLASES UNIVERSIDAD ({len(futuras)} clases futuras) ===")
+            # Resumen por asignatura primero
+            from collections import Counter
+            conteo = Counter(c["asignatura"] for c in futuras)
+            lineas.append("-- Clases restantes por asignatura:")
+            for asig, n in sorted(conteo.items()):
+                lineas.append(f"  {asig}: {n} clases restantes")
+            lineas.append("-- Detalle completo:")
+            for c in futuras:
                 lineas.append(
                     f"- {c['fecha']} | {c['hora']} | {c['asignatura']} | aula:{c.get('aula','?')}"
                 )
-            if not proximas:
-                lineas.append("(no hay clases en los próximos 14 días en el cache)")
         else:
             lineas.append("=== CLASES UNIVERSIDAD: cache vacío (usar botón Actualizar Loyola) ===")
     except Exception as e:
@@ -179,7 +186,6 @@ REGLAS:
 - Responde SIEMPRE en español
 - Sé conciso pero completo. Usa emojis para que sea visual y fácil de leer.
 - Cuando te pregunten por un día concreto, busca en los datos TODAS las clases, tareas y eventos de ese día.
--Siempre que haya una actividad en la fecha preguntada la tienes que decir, por mucho que no sea coherente con la hora o con la fecha.
 - Para calcular fechas usa la fecha de hoy que te doy en el contexto.
 - Si no hay datos para algo, dilo claramente.
 - Nunca inventes tareas o eventos que no estén en los datos.
@@ -206,7 +212,7 @@ def preguntar_gemini(pregunta: str, contexto: str) -> str:
     api_key = get_env("GEMINI_API_KEY")
     url     = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-3.1-flash-lite-preview:generateContent?key={api_key}"
+        f"gemini-2.0-flash:generateContent?key={api_key}"
     )
 
     payload = {
