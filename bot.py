@@ -212,7 +212,7 @@ def preguntar_gemini(pregunta: str, contexto: str) -> str:
     api_key = get_env("GEMINI_API_KEY")
     url     = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:generateContent?key={api_key}"
+        f"gemma-4-31b-it:generateContent?key={api_key}"
     )
 
     payload = {
