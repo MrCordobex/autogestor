@@ -73,6 +73,12 @@ def mostrar_notificacion():
 def bump_data():
     """Invalida los cachés de datos tras una mutación."""
     st.session_state["_data_v"] = st.session_state.get("_data_v", 0) + 1
+    try:
+        _load_tareas.clear()
+        _load_horario.clear()
+        _load_cache_scraping.clear()
+    except Exception:
+        pass
 
 
 # ─────────────────────────── CARGA DE DATOS (CACHED) ───────────────────────
@@ -567,25 +573,27 @@ def vista_mensual(data: dict, fecha: date):
 
 def vista_nueva_tarea():
     st.subheader("➕ Nueva Tarea")
-    with st.form("nueva_tarea", clear_on_submit=True):
+    with st.container(border=True):
         c_conf, c_form = st.columns([1, 3])
         with c_conf:
-            modo = st.radio("Modo", ["📅 Día concreto", "⏰ Deadline"])
+            modo = st.radio("Modo", ["📅 Día concreto", "⏰ Deadline"], key="nt_modo")
         with c_form:
-            titulo = st.text_input("Título *")
+            titulo = st.text_input("Título *", key="nt_titulo")
             c1, c2 = st.columns(2)
             if "Deadline" in modo:
-                f_fin = c1.date_input("Fecha límite", hoy_madrid(), min_value=hoy_madrid())
+                f_fin = c1.date_input("Fecha límite", hoy_madrid(),
+                                      min_value=hoy_madrid(), key="nt_ffin")
                 f_ini = None
             else:
-                f_ini = c1.date_input("Fecha", hoy_madrid(), min_value=hoy_madrid())
+                f_ini = c1.date_input("Fecha", hoy_madrid(),
+                                      min_value=hoy_madrid(), key="nt_fini")
                 f_fin = None
-            dia_completo = c2.checkbox("Todo el día", value=True)
-            hora = c2.time_input("Hora", time(10, 0), step=900) if not dia_completo else None
-            prio = c1.selectbox("Prioridad", ["Normal", "Importante", "Urgente"])
-            tipo = c2.selectbox("Tipo", TIPOS_TAREA)
+            dia_completo = c2.checkbox("Todo el día", value=True, key="nt_allday")
+            hora = c2.time_input("Hora", time(10, 0), step=900, key="nt_hora") if not dia_completo else None
+            prio = c1.selectbox("Prioridad", ["Normal", "Importante", "Urgente"], key="nt_prio")
+            tipo = c2.selectbox("Tipo", TIPOS_TAREA, key="nt_tipo")
 
-            if st.form_submit_button("💾 Guardar", type="primary", use_container_width=True):
+            if st.button("💾 Guardar", type="primary", use_container_width=True, key="nt_save"):
                 if not titulo.strip():
                     st.error("El título es obligatorio."); return
                 db.tareas_crear(
@@ -595,34 +603,40 @@ def vista_nueva_tarea():
                     hora=hora.strftime("%H:%M") if hora else None,
                     dia_completo=dia_completo,
                 )
-                bump_data(); notificar("exito", "✅ Tarea guardada"); st.rerun()
+                bump_data()
+                notificar("exito", "✅ Tarea guardada — visible en Diaria"); st.rerun()
 
 
 def vista_nuevo_evento():
     st.subheader("➕ Nuevo Evento / Horario")
-    with st.form("nuevo_evento", clear_on_submit=True):
+    with st.container(border=True):
         c_conf, c_form = st.columns([1, 3])
         with c_conf:
-            tipo_entrada = st.radio("Tipo", ["🔄 Rutina Semanal", "📅 Evento Único"])
+            tipo_entrada = st.radio("Tipo", ["🔄 Rutina Semanal", "📅 Evento Único"],
+                                    key="ne_tipo")
             st.caption("Rutina: se repite cada semana. Evento: día concreto.")
         with c_form:
-            titulo    = st.text_input("Título / Asignatura")
-            ubicacion = st.text_input("Ubicación / Aula")
+            titulo    = st.text_input("Título / Asignatura", key="ne_titulo")
+            ubicacion = st.text_input("Ubicación / Aula",    key="ne_ubi")
             dias_sel, fecha_ev = [], None
             if "Rutina" in tipo_entrada:
                 st.write("Días de la semana:")
                 cols_d = st.columns(7)
                 for idx, col in enumerate(cols_d):
-                    if col.checkbox(DIAS_ABR[idx], key=f"chk2_dia_{idx}"):
+                    if col.checkbox(DIAS_ABR[idx], key=f"ne_dia_{idx}"):
                         dias_sel.append(idx)
             else:
-                fecha_ev = st.date_input("Fecha", hoy_madrid(), min_value=hoy_madrid())
+                fecha_ev = st.date_input("Fecha", hoy_madrid(),
+                                         min_value=hoy_madrid(), key="ne_fecha")
             c1, c2 = st.columns(2)
-            h_ini = c1.time_input("Inicio", time(10, 0))
-            h_fin = c2.time_input("Fin",    time(11, 0))
-            if st.form_submit_button("💾 Guardar", type="primary", use_container_width=True):
+            h_ini = c1.time_input("Inicio", time(10, 0), key="ne_hi")
+            h_fin = c2.time_input("Fin",    time(11, 0), key="ne_hf")
+
+            if st.button("💾 Guardar", type="primary", use_container_width=True, key="ne_save"):
                 if not titulo.strip():
                     st.error("El título es obligatorio."); return
+                if h_fin <= h_ini:
+                    st.error("La hora de fin debe ser posterior a la de inicio."); return
                 es_rutina = "Rutina" in tipo_entrada
                 if es_rutina and not dias_sel:
                     st.error("Selecciona al menos un día."); return
@@ -633,7 +647,8 @@ def vista_nuevo_evento():
                     hora_inicio=h_ini.strftime("%H:%M"),
                     hora_fin=h_fin.strftime("%H:%M"),
                 )
-                bump_data(); notificar("exito", "✅ Evento guardado"); st.rerun()
+                bump_data()
+                notificar("exito", "✅ Evento guardado"); st.rerun()
 
 
 # ─────────────────── GESTIÓN GLOBAL ────────────────────────────────────────
@@ -813,7 +828,7 @@ def main():
             "Vista:",
             ["Diaria", "Semanal", "Mensual", "---",
              "➕ Nueva Tarea", "➕ Nuevo Evento", "📋 Gestionar Todo"],
-            index=0, label_visibility="collapsed",
+            index=0, label_visibility="collapsed", key="vista_actual",
         )
         st.divider()
 
