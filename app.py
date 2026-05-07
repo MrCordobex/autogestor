@@ -393,22 +393,95 @@ def _tarjeta_pendiente(t: dict, hoy: date):
 
 
 def _grid_css():
+    """
+    CSS responsive global. Reglas calendario aplican solo a la zona principal
+    (section[data-testid="stMain"]); el diálogo tiene sus propios overrides
+    que vienen DESPUÉS y tienen mayor especificidad, así no se rompe en móvil.
+    """
     st.markdown("""<style>
-        @media (max-width:900px) {
-            div[data-testid="stHorizontalBlock"] {
-                flex-direction:row!important; flex-wrap:nowrap!important; gap:0!important;
+        /* ───── CALENDARIO (week/month) ───── */
+        @media (max-width: 900px) {
+            section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                gap: 2px !important;
             }
-            div[data-testid="column"] { flex:1 1 0!important; min-width:0!important; padding:0!important; }
+            section[data-testid="stMain"] div[data-testid="column"] {
+                flex: 1 1 0 !important;
+                min-width: 0 !important;
+                padding: 0 1px !important;
+            }
         }
-        @media (orientation:portrait) and (max-width:600px) {
-            div[data-testid="stHorizontalBlock"] {
-                display:grid!important; grid-template-columns:repeat(7,1fr)!important; gap:1px!important;
+        @media (orientation: portrait) and (max-width: 600px) {
+            section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
+                display: grid !important;
+                grid-template-columns: repeat(7, 1fr) !important;
+                gap: 1px !important;
             }
-            div[data-testid="column"] { width:auto!important; min-width:0!important; padding:0!important; }
-            div[data-testid="column"] p { font-size:3vw!important; text-align:center!important; margin:0!important; }
-            div[data-testid="stButton"] button { font-size:4vw!important; padding:0!important;
-                min-height:25px!important; border:none!important; background:transparent!important; }
-            div[data-testid="stButton"] button p { max-width:1.5em!important; overflow:hidden!important; margin:0 auto!important; }
+            section[data-testid="stMain"] div[data-testid="column"] {
+                width: auto !important; min-width: 0 !important; padding: 0 !important;
+            }
+            section[data-testid="stMain"] div[data-testid="column"] p {
+                font-size: 2.6vw !important; text-align: center !important;
+                margin: 0 !important; line-height: 1.1 !important;
+            }
+            section[data-testid="stMain"] div[data-testid="stButton"] button {
+                font-size: 2.8vw !important; padding: 2px 1px !important;
+                min-height: 28px !important; border: none !important;
+                background: transparent !important; line-height: 1.1 !important;
+            }
+            section[data-testid="stMain"] div[data-testid="stButton"] button p {
+                max-width: 100% !important; overflow: hidden !important;
+                text-overflow: ellipsis !important; white-space: nowrap !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        /* ───── DIÁLOGO (override — siempre vertical y full-width) ───── */
+        /* Importante: estas reglas van DESPUÉS para ganar a las del calendario. */
+        div[data-testid="stDialog"] [role="dialog"] {
+            max-width: min(560px, 95vw) !important;
+            width: 95vw !important;
+        }
+        div[data-testid="stDialog"] div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            grid-template-columns: none !important;
+            gap: 0.5rem !important;
+        }
+        div[data-testid="stDialog"] div[data-testid="column"] {
+            flex: 1 1 220px !important;
+            min-width: 0 !important;
+            width: auto !important;
+            padding: 0 !important;
+        }
+        div[data-testid="stDialog"] div[data-testid="stButton"] button {
+            min-height: 44px !important;
+            font-size: 1rem !important;
+            background: initial !important;
+            border: 1px solid rgba(255,255,255,.15) !important;
+            white-space: normal !important;
+            width: 100% !important;
+        }
+        div[data-testid="stDialog"] p, div[data-testid="stDialog"] li {
+            font-size: 0.95rem !important;
+            line-height: 1.4 !important;
+        }
+        /* En móvil el diálogo apila columnas en una sola */
+        @media (max-width: 600px) {
+            div[data-testid="stDialog"] div[data-testid="stHorizontalBlock"] {
+                flex-direction: column !important;
+            }
+            div[data-testid="stDialog"] div[data-testid="column"] {
+                flex: 1 1 100% !important;
+                width: 100% !important;
+            }
+            div[data-testid="stDialog"] [role="dialog"] {
+                width: 96vw !important;
+                max-width: 96vw !important;
+                margin: 0 auto !important;
+            }
         }
     </style>""", unsafe_allow_html=True)
 
